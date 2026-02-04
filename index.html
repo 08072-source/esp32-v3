@@ -1,0 +1,117 @@
+<script>
+
+const csvUrl = "https://docs.google.com/spreadsheets/d/1is4HVAGQwXNXCZynw3pWGqbM8o_pfZOqkvZQCEfBc_I/export?format=csv&gid=0";
+
+let chart;
+
+/* ===== นาฬิกาปัจจุบัน ===== */
+function updateClock(){
+  let now = new Date();
+  document.getElementById("clock").innerText =
+    now.toLocaleString("th-TH");
+}
+setInterval(updateClock,1000);
+updateClock();
+
+/* ===== โหลดข้อมูล ===== */
+async function loadData(){
+
+  try{
+
+    const res = await fetch(csvUrl);
+    const text = await res.text();
+
+    const rows = text.split("\n").slice(1);
+
+    let time = [];
+    let temp = [];
+    let hum = [];
+    let rawTime = [];
+
+    rows.forEach(r=>{
+
+      let col = r.split(",");
+
+      if(col[0] && col[1] && col[2]){
+
+        let t = new Date(col[0]);
+
+        rawTime.push(t);
+
+        let label = t.toLocaleTimeString("th-TH",
+        {hour:'2-digit', minute:'2-digit'});
+
+        time.push(label);
+        temp.push(parseFloat(col[1]));
+        hum.push(parseFloat(col[2]));
+      }
+    });
+
+    if(temp.length === 0) return;
+
+    /* ⭐ แสดงค่าปัจจุบัน */
+    document.getElementById("tempNow").innerText =
+      temp[temp.length-1] + " °C";
+
+    document.getElementById("humNow").innerText =
+      hum[hum.length-1] + " %";
+
+    /* ⭐ เวลา */
+    let last = rawTime[rawTime.length-1];
+
+    document.getElementById("lastTime").innerText =
+      last.toLocaleString("th-TH");
+
+    drawChart(time,temp,hum);
+
+  }catch(err){
+    console.log("โหลดข้อมูลผิดพลาด", err);
+  }
+}
+
+/* ===== วาดกราฟ ===== */
+function drawChart(time,temp,hum){
+
+  if(chart) chart.destroy();
+
+  chart = new Chart(document.getElementById("chart"),{
+
+    type:"line",
+
+    data:{
+      labels:time,
+      datasets:[
+        {
+          label:"Temperature",
+          data:temp,
+          borderWidth:3,
+          tension:0.4
+        },
+        {
+          label:"Humidity",
+          data:hum,
+          borderWidth:3,
+          tension:0.4
+        }
+      ]
+    },
+
+    options:{
+      responsive:true,
+      maintainAspectRatio:false,
+      plugins:{
+        legend:{ labels:{ color:"white" } }
+      },
+      scales:{
+        x:{ ticks:{ color:"white" } },
+        y:{ ticks:{ color:"white" } }
+      }
+    }
+
+  });
+}
+
+loadData();
+setInterval(loadData,60000);
+
+</script>
